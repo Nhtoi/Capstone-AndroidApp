@@ -2,4 +2,5 @@
 <resources>
     <item name="tvNumber" type="id" />
     <item name="btnViewTranscript" type="id" />
+    <item name="homeTitle" type="id" />
 </resources>

@@ -12,32 +12,34 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class CallHistoryActivity extends AppCompatActivity {
     private RecyclerView rvCallHistory;
-    private DatabaseRepository dbRepository;
+    private List<CallRecord> callRecords = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_call_history);
 
-        // Initialize database repository
-        dbRepository = new DatabaseRepository();
-
         rvCallHistory = findViewById(R.id.rvCallHistory);
         rvCallHistory.setLayoutManager(new LinearLayoutManager(this));
 
-        List<DatabaseHelper.CallRecord> callRecords = dbRepository.getCallHistory();
+        // Dummy data for testing (replace with real data source if needed)
+        callRecords.add(new CallRecord("123-456-7890", "2025-03-27 12:30 PM", "Completed", 125));
+        callRecords.add(new CallRecord("987-654-3210", "2025-03-27 1:15 PM", "Missed", 0));
+        callRecords.add(new CallRecord("555-555-5555", "2025-03-27 2:00 PM", "Completed", 240));
+
         CallHistoryAdapter adapter = new CallHistoryAdapter(callRecords);
         rvCallHistory.setAdapter(adapter);
     }
 
     private class CallHistoryAdapter extends RecyclerView.Adapter<CallHistoryAdapter.ViewHolder> {
-        private List<DatabaseHelper.CallRecord> callRecords;
+        private final List<CallRecord> callRecords;
 
-        public CallHistoryAdapter(List<DatabaseHelper.CallRecord> callRecords) {
+        public CallHistoryAdapter(List<CallRecord> callRecords) {
             this.callRecords = callRecords;
         }
 
@@ -51,7 +53,7 @@ public class CallHistoryActivity extends AppCompatActivity {
 
         @Override
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-            DatabaseHelper.CallRecord record = callRecords.get(position);
+            CallRecord record = callRecords.get(position);
 
             holder.tvPhoneNumber.setText(record.getPhoneNumber());
             holder.tvTimestamp.setText(record.getTimestamp());
@@ -67,7 +69,6 @@ public class CallHistoryActivity extends AppCompatActivity {
                 startActivity(intent);
             };
 
-            // Set click listener on both the item view and the button
             holder.itemView.setOnClickListener(clickListener);
             holder.btnViewTranscript.setOnClickListener(clickListener);
         }
@@ -76,6 +77,7 @@ public class CallHistoryActivity extends AppCompatActivity {
         public int getItemCount() {
             return callRecords.size();
         }
+
         public class ViewHolder extends RecyclerView.ViewHolder {
             public View btnViewTranscript;
             TextView tvPhoneNumber, tvTimestamp, tvStatus, tvDuration;
@@ -86,9 +88,38 @@ public class CallHistoryActivity extends AppCompatActivity {
                 tvTimestamp = itemView.findViewById(R.id.tvTimestamp);
                 tvStatus = itemView.findViewById(R.id.tvStatus);
                 tvDuration = itemView.findViewById(R.id.tvDuration);
-                btnViewTranscript = itemView.findViewById(R.id.btnViewTranscript); // Add this line
+                btnViewTranscript = itemView.findViewById(R.id.btnViewTranscript);
             }
         }
+    }
 
+    private static class CallRecord {
+        private final String phoneNumber;
+        private final String timestamp;
+        private final String status;
+        private final int duration;
+
+        public CallRecord(String phoneNumber, String timestamp, String status, int duration) {
+            this.phoneNumber = phoneNumber;
+            this.timestamp = timestamp;
+            this.status = status;
+            this.duration = duration;
+        }
+
+        public String getPhoneNumber() {
+            return phoneNumber;
+        }
+
+        public String getTimestamp() {
+            return timestamp;
+        }
+
+        public String getStatus() {
+            return status;
+        }
+
+        public int getDuration() {
+            return duration;
+        }
     }
 }

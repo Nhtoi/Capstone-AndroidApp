@@ -7,9 +7,9 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-
-    <!-- Additional colors from your previous implementation -->
+    <color name="lavender">#8692f7</color>
     <color name="colorprimary">#3F51B5</color>
     <color name="colorprimaryDark">#303F9F</color>
     <color name="colorAccent">#FF4081</color>
+    <color name="brown">#3C3636</color>
 </resources>
