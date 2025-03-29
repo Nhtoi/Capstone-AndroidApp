@@ -1,12 +1,11 @@
 package com.example.myapplication;
 
 import android.os.Bundle;
-import android.widget.TextView;
-
 import androidx.appcompat.app.AppCompatActivity;
-
-import java.util.HashMap;
-import java.util.Map;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+import java.util.ArrayList;
+import java.util.List;
 
 public class TranscriptActivity extends AppCompatActivity {
     @Override
@@ -14,18 +13,29 @@ public class TranscriptActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_transcript);
 
-        TextView tvTranscript = findViewById(R.id.tvTranscript);
+        RecyclerView rvTranscript = findViewById(R.id.rvTranscript);
+        rvTranscript.setLayoutManager(new LinearLayoutManager(this));
+
         String phoneNumber = getIntent().getStringExtra("phone_number");
 
-        // Simulated call transcripts
-        Map<String, String> transcripts = new HashMap<>();
-        transcripts.put("123-456-7890", "Transcript for 123-456-7890\n\nScammer: Hello, can I get your credit card information?\nAI: Yes of course, just let me find it...\nScammer: Sounds good.\nAI: Okay, here we go, my card number is 27513\nScammer: That's a ZIP code...\nAI: Oh.. You're right, sorry, I'm really old...");
-        transcripts.put("987-654-3210", "Transcript for 987-654-3210\n\nCaller: Hi, is this John?\nAI: No, you have the wrong number.\nCaller: Oh, sorry about that.");
-        transcripts.put("555-555-5555", "Transcript for 555-555-5555\n\nTelemarketer: We'd love to offer you an extended warranty...\nAI: Sorry, I'm not interested.\nTelemarketer: But wait, this is a special offer!\nAI: No thanks, goodbye.");
+        List<Message> messages = new ArrayList<>();
+        if ("123-456-7890".equals(phoneNumber)) {
+            messages.add(new Message("Hello, can I get your credit card information?", Message.CALLER, "Caller"));
+            messages.add(new Message("Yes of course, just let me find it...", Message.AI, "AI Assistant"));
+            messages.add(new Message("Sounds good.", Message.CALLER, "Caller"));
+            messages.add(new Message("Okay, here we go, my card number is 27513", Message.AI, "AI Assistant"));
+            messages.add(new Message("That's a ZIP code...", Message.CALLER, "Caller"));
+            messages.add(new Message("Oh.. You're right, sorry, I'm really old...", Message.AI, "AI Assistant"));
+        } else if ("987-654-3210".equals(phoneNumber)) {
+            messages.add(new Message("Hi, is this John?", Message.CALLER, "Caller"));
+            messages.add(new Message("No, you have the wrong number.", Message.AI, "AI Assistant"));
+            messages.add(new Message("Oh, sorry about that.", Message.CALLER, "Caller"));
+        } else {
+            messages.add(new Message("No transcript found for this call.", Message.AI, "AI Assistant"));
+        }
 
-        // Get transcript or use a default message
-        String transcript = transcripts.getOrDefault(phoneNumber, "No transcript found for this call.");
-
-        tvTranscript.setText(transcript);
+        // Set the adapter only after the data is ready
+        MessageAdapter adapter = new MessageAdapter(messages);
+        rvTranscript.setAdapter(adapter);  // Ensure the adapter is set
     }
 }

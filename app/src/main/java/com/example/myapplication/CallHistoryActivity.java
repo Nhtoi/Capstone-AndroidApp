@@ -28,9 +28,9 @@ public class CallHistoryActivity extends AppCompatActivity {
         rvCallHistory.setLayoutManager(new LinearLayoutManager(this));
 
         // Dummy data for testing (replace with real data source if needed)
-        callRecords.add(new CallRecord("123-456-7890", "2025-03-27 12:30 PM", "Completed", 125));
-        callRecords.add(new CallRecord("987-654-3210", "2025-03-27 1:15 PM", "Missed", 0));
-        callRecords.add(new CallRecord("555-555-5555", "2025-03-27 2:00 PM", "Completed", 240));
+        callRecords.add(new CallRecord("123-456-7890", "2025-03-27 12:30 PM",125));
+        callRecords.add(new CallRecord("987-654-3210", "2025-03-27 1:15 PM",0));
+        callRecords.add(new CallRecord("555-555-5555", "2025-03-27 2:00 PM", 240));
 
         CallHistoryAdapter adapter = new CallHistoryAdapter(callRecords);
         rvCallHistory.setAdapter(adapter);
@@ -57,7 +57,6 @@ public class CallHistoryActivity extends AppCompatActivity {
 
             holder.tvPhoneNumber.setText(record.getPhoneNumber());
             holder.tvTimestamp.setText(record.getTimestamp());
-            holder.tvStatus.setText(record.getStatus());
 
             int minutes = record.getDuration() / 60;
             int seconds = record.getDuration() % 60;
@@ -80,13 +79,12 @@ public class CallHistoryActivity extends AppCompatActivity {
 
         public class ViewHolder extends RecyclerView.ViewHolder {
             public View btnViewTranscript;
-            TextView tvPhoneNumber, tvTimestamp, tvStatus, tvDuration;
+            TextView tvPhoneNumber, tvTimestamp, tvDuration;
 
             public ViewHolder(@NonNull View itemView) {
                 super(itemView);
                 tvPhoneNumber = itemView.findViewById(R.id.tvPhoneNumber);
                 tvTimestamp = itemView.findViewById(R.id.tvTimestamp);
-                tvStatus = itemView.findViewById(R.id.tvStatus);
                 tvDuration = itemView.findViewById(R.id.tvDuration);
                 btnViewTranscript = itemView.findViewById(R.id.btnViewTranscript);
             }
@@ -96,26 +94,19 @@ public class CallHistoryActivity extends AppCompatActivity {
     private static class CallRecord {
         private final String phoneNumber;
         private final String timestamp;
-        private final String status;
         private final int duration;
 
-        public CallRecord(String phoneNumber, String timestamp, String status, int duration) {
+        public CallRecord(String phoneNumber, String timestamp, int duration) {
             this.phoneNumber = phoneNumber;
             this.timestamp = timestamp;
-            this.status = status;
             this.duration = duration;
         }
-
         public String getPhoneNumber() {
             return phoneNumber;
         }
 
         public String getTimestamp() {
             return timestamp;
-        }
-
-        public String getStatus() {
-            return status;
         }
 
         public int getDuration() {
