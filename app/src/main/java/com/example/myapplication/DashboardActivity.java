@@ -1,27 +1,26 @@
 package com.example.myapplication;
 
-import android.app.Activity;
-import android.app.ActivityManager;
 import android.content.Intent;
-import android.os.AsyncTask;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.example.myapplication.databinding.ActivityDashboardBinding;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
-import org.json.JSONArray;
-import org.json.JSONObject;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class DashboardActivity extends AppCompatActivity {
     private TextView tvWelcome;
@@ -30,116 +29,112 @@ public class DashboardActivity extends AppCompatActivity {
     private Button btnViewBlackListWhiteList;
     private AIModelCarousel aiModelCarousel;
 
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        executor.shutdown();
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_dashboard);
 
-        // Initialize views
         tvWelcome = findViewById(R.id.tvWelcome);
-        tvCurrentModel = new TextView(this);
-        tvCurrentModel.setTextSize(18);
-        tvCurrentModel.setPadding(16, 16, 16, 16);
-
+        tvCurrentModel = findViewById(R.id.tvCurrentModel); // ✅ Added this line
         btnViewCallHistory = findViewById(R.id.btnViewCallHistory);
-        aiModelCarousel = findViewById(R.id.aiModelCarousel);
         btnViewBlackListWhiteList = findViewById(R.id.btnViewBlackListWhiteList);
-
-        // Get email from intent
-        String email = getIntent().getStringExtra("email");
-        tvWelcome.setText("Welcome, " + (email != null ? email : "User") + "!");
+        aiModelCarousel = findViewById(R.id.aiModelCarousel);
 
         // Fetch and display current AI model
         fetchCurrentAIModel();
         fetchAIModels();
 
-        // View Call History button listener
-        btnViewCallHistory.setOnClickListener(v -> startActivity(new Intent(DashboardActivity.this, CallHistoryActivity.class)));
-        btnViewBlackListWhiteList.setOnClickListener(v-> startActivity(new Intent(DashboardActivity.this, WhiteListBlackList.class)));
-    }
-
-    private void replaceActivity(Class<? extends Activity> activityClass) {
-        Intent intent = new Intent(this, activityClass);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        startActivity(intent);
-        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
+        // Button listeners
+        btnViewCallHistory.setOnClickListener(v ->
+                startActivity(new Intent(DashboardActivity.this, CallHistoryActivity.class))
+        );
+        btnViewBlackListWhiteList.setOnClickListener(v ->
+                startActivity(new Intent(DashboardActivity.this, WhiteListBlackList.class))
+        );
     }
 
     private void fetchCurrentAIModel() {
-        new AsyncTask<Void, Void, String>() {
-            @Override
-            protected String doInBackground(Void... voids) {
-                try {
-                    URL url = new URL("http://35.222.77.247:5000/currentmodel");
-                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                    conn.setRequestMethod("GET");
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-                    StringBuilder response = new StringBuilder();
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        response.append(line);
-                    }
-                    reader.close();
-                    return response.toString();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    return null;
-                }
-            }
+        executor.execute(() -> {
+            try {
+                String uid = "2"; // Hardcoded for now
+                URL url = new URL("https://scam-scam-service-185231488037.us-central1.run.app/api/v1/app/pull-pref");
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setDoOutput(true);
 
-            @Override
-            protected void onPostExecute(String result) {
-                if (result != null) {
-                    try {
-                        JSONObject jsonObject = new JSONObject(result);
-                        String modelName = jsonObject.getString("model");
-                        tvCurrentModel.setText("Current AI Model: " + modelName);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                } else {
-                    tvCurrentModel.setText("Failed to fetch AI Model");
+                String jsonInputString = "{\"ownedBy\": \"" + uid + "\"}";
+                OutputStream os = conn.getOutputStream();
+                os.write(jsonInputString.getBytes("UTF-8"));
+                os.close();
+
+                BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                StringBuilder response = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    response.append(line);
                 }
+                reader.close();
+
+                Log.d("Dashboard", "AI Models JSON: " + response.toString());
+
+                JSONObject jsonObject = new JSONObject(response.toString());
+                JSONObject resultObject = jsonObject.getJSONObject("result");
+                String modelName = resultObject.optString("voice", "No voice preference set");
+
+                runOnUiThread(() -> tvCurrentModel.setText("Current AI Model: " + modelName));
+            } catch (Exception e) {
+                e.printStackTrace();
+                runOnUiThread(() -> tvCurrentModel.setText("Failed to fetch AI preferences"));
             }
-        }.execute();
+        });
     }
 
     private void fetchAIModels() {
-        new AsyncTask<Void, Void, List<AIModel>>() {
-            @Override
-            protected List<AIModel> doInBackground(Void... voids) {
-                List<AIModel> models = new ArrayList<>();
-                try {
-                    URL url = new URL("http://35.222.77.247:5000/aimodels");
-                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                    conn.setRequestMethod("GET");
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-                    StringBuilder response = new StringBuilder();
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        response.append(line);
-                    }
-                    reader.close();
+        executor.execute(() -> {
+            List<AIModel> models = new ArrayList<>();
+            try {
+                URL url = new URL("http://35.222.77.247:5000/aimodels");
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
 
-                    JSONArray jsonArray = new JSONArray(response.toString());
-                    for (int i = 0; i < jsonArray.length(); i++) {
-                        JSONObject jsonObject = jsonArray.getJSONObject(i);
-                        models.add(new AIModel(jsonObject.getString("name"), jsonObject.getString("description"), R.drawable.model_gpt4));
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
+                BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                StringBuilder response = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    response.append(line);
                 }
-                return models;
-            }
+                reader.close();
 
-            @Override
-            protected void onPostExecute(List<AIModel> models) {
-                if (!models.isEmpty()) {
-                    aiModelCarousel.setModels(models);
-                } else {
-                    Toast.makeText(DashboardActivity.this, "Failed to load AI Models", Toast.LENGTH_SHORT).show();
+                JSONArray jsonArray = new JSONArray(response.toString());
+                for (int i = 0; i < jsonArray.length(); i++) {
+                    JSONObject jsonObject = jsonArray.getJSONObject(i);
+                    models.add(new AIModel(
+                            jsonObject.getString("name"),
+                            jsonObject.getString("description"),
+                            R.drawable.model_gpt4
+                    ));
                 }
+
+                runOnUiThread(() -> {
+                    if (!models.isEmpty()) {
+                        aiModelCarousel.setModels(models);
+                    } else {
+                        Toast.makeText(DashboardActivity.this, "Failed to load AI Models", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            } catch (Exception e) {
+                e.printStackTrace();
+                runOnUiThread(() -> Toast.makeText(DashboardActivity.this, "Failed to load AI Models", Toast.LENGTH_SHORT).show());
             }
-        }.execute();
+        });
     }
 }
