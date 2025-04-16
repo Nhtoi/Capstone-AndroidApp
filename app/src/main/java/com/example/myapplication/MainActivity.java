@@ -9,8 +9,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.example.myapplication.databinding.ActivityMainBinding;
-
 import org.json.JSONObject;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -24,7 +22,6 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
@@ -41,7 +38,14 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(MainActivity.this, "Enter email and password", Toast.LENGTH_SHORT).show();
                 return;
             }
-            new LoginTask(MainActivity.this).execute(email, password);
+
+            // Bypass authentication if demo credentials are used
+            if (email.equals("demo") && password.equals("demo")) {
+                Toast.makeText(MainActivity.this, "Login successful", Toast.LENGTH_SHORT).show();
+                startActivity(new Intent(MainActivity.this, DashboardActivity.class));
+            } else {
+                new LoginTask(MainActivity.this).execute(email, password);
+            }
         });
 
         tvSignUp.setOnClickListener(v -> startActivity(new Intent(MainActivity.this, SignUpActivity.class)));
@@ -57,14 +61,14 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected Boolean doInBackground(String... params) {
             try {
-                URL url = new URL("http://35.222.77.247:5000/login");
+                URL url = new URL("https://scam-scam-service-185231488037.us-central1.run.app/api/v1/auth/login"); // ✅ Updated URL
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("POST");
                 conn.setRequestProperty("Content-Type", "application/json");
                 conn.setDoOutput(true);
 
                 JSONObject jsonParam = new JSONObject();
-                jsonParam.put("email", params[0]);  // Changed "username" to "email"
+                jsonParam.put("email", params[0]);
                 jsonParam.put("password", params[1]);
 
                 OutputStream os = conn.getOutputStream();

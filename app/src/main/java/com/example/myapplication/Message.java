@@ -7,11 +7,13 @@ public class Message {
     private String text;
     private int sender;
     private String senderName;
+    private String callId;
 
-    public Message(String text, int sender, String senderName) {
+    public Message(String text, int sender, String senderName, String callId) {
         this.text = text;
         this.sender = sender;
         this.senderName = senderName;
+        this.callId = callId;
     }
 
     public String getText() {
@@ -24,5 +26,9 @@ public class Message {
 
     public String getSenderName() {
         return senderName;
+    }
+
+    public String getCallId() {
+        return callId;
     }
 }
