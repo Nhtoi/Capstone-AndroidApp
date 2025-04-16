@@ -30,7 +30,7 @@ public class CallHistoryActivity extends AppCompatActivity {
     private RecyclerView rvCallHistory;
     private List<CallRecord> callRecords = new ArrayList<>();
     private static final String TAG = "CallHistoryActivity";
-    private static final String USER_ID = "1";
+    private static final String USER_ID = "6";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

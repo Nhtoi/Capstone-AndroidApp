@@ -47,7 +47,6 @@ public class AIModelCarousel extends LinearLayout {
         viewPager = findViewById(R.id.viewPager);
         adapter = new AIModelAdapter();
         viewPager.setAdapter(adapter);
-
         // Add page margin and transformation for carousel effect
         viewPager.setPageMargin(getResources().getDimensionPixelOffset(R.dimen.carousel_page_margin));
         viewPager.setOffscreenPageLimit(3);

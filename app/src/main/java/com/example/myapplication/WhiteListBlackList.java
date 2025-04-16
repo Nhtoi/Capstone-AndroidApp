@@ -33,7 +33,7 @@ public class WhiteListBlackList extends AppCompatActivity {
     private static final String BASE_URL = "https://scam-scam-service-185231488037.us-central1.run.app";
     private static final String FETCH_URL = BASE_URL + "/api/v1/app/pull-white";
     private static final String POST_URL = BASE_URL + "/api/v1/users/set-white";
-    private static final String OWNED_BY = "1";
+    private static final String OWNED_BY = "6";
 
     private EditText etNumber;
     private Button btnAdd, btnSort;

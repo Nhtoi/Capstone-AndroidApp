@@ -9,7 +9,6 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -29,6 +28,8 @@ public class DashboardActivity extends AppCompatActivity {
     private Button btnViewBlackListWhiteList;
     private AIModelCarousel aiModelCarousel;
 
+    private String userId; // <- Holds the user ID passed from MainActivity
+
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
     @Override
@@ -42,36 +43,45 @@ public class DashboardActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_dashboard);
 
+        // Get user ID from intent
+        userId = getIntent().getStringExtra("USER_ID");
+
         tvWelcome = findViewById(R.id.tvWelcome);
-        tvCurrentModel = findViewById(R.id.tvCurrentModel); // ✅ Added this line
+        tvCurrentModel = findViewById(R.id.tvCurrentModel);
         btnViewCallHistory = findViewById(R.id.btnViewCallHistory);
         btnViewBlackListWhiteList = findViewById(R.id.btnViewBlackListWhiteList);
         aiModelCarousel = findViewById(R.id.aiModelCarousel);
 
-        // Fetch and display current AI model
+        aiModelCarousel.setOnModelSelectedListener(selectedModel -> {
+            setAI(selectedModel.getName());
+        });
+
         fetchCurrentAIModel();
         fetchAIModels();
 
-        // Button listeners
-        btnViewCallHistory.setOnClickListener(v ->
-                startActivity(new Intent(DashboardActivity.this, CallHistoryActivity.class))
-        );
-        btnViewBlackListWhiteList.setOnClickListener(v ->
-                startActivity(new Intent(DashboardActivity.this, WhiteListBlackList.class))
-        );
+        btnViewCallHistory.setOnClickListener(v -> {
+            Intent intent = new Intent(DashboardActivity.this, CallHistoryActivity.class);
+            intent.putExtra("USER_ID", userId);
+            startActivity(intent);
+        });
+
+        btnViewBlackListWhiteList.setOnClickListener(v -> {
+            Intent intent = new Intent(DashboardActivity.this, WhiteListBlackList.class);
+            intent.putExtra("USER_ID", userId);
+            startActivity(intent);
+        });
     }
 
     private void fetchCurrentAIModel() {
         executor.execute(() -> {
             try {
-                String uid = "2"; // Hardcoded for now
                 URL url = new URL("https://scam-scam-service-185231488037.us-central1.run.app/api/v1/app/pull-pref");
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("POST");
                 conn.setRequestProperty("Content-Type", "application/json");
                 conn.setDoOutput(true);
 
-                String jsonInputString = "{\"ownedBy\": \"" + uid + "\"}";
+                String jsonInputString = "{\"ownedBy\": \"" + userId + "\"}";
                 OutputStream os = conn.getOutputStream();
                 os.write(jsonInputString.getBytes("UTF-8"));
                 os.close();
@@ -83,8 +93,6 @@ public class DashboardActivity extends AppCompatActivity {
                     response.append(line);
                 }
                 reader.close();
-
-                Log.d("Dashboard", "AI Models JSON: " + response.toString());
 
                 JSONObject jsonObject = new JSONObject(response.toString());
                 JSONObject resultObject = jsonObject.getJSONObject("result");
@@ -101,10 +109,86 @@ public class DashboardActivity extends AppCompatActivity {
     private void fetchAIModels() {
         executor.execute(() -> {
             List<AIModel> models = new ArrayList<>();
+
+            String basePersonaUrl = "https://aivoice-chatbox-185231488037.us-central1.run.app/incoming-call?persona=";
+
+            String[][] personas = {
+                    {"genZ", "Energetic Gen Z persona"},
+                    {"texanDude", "Southern drawl, Texan vibes"},
+                    {"shaggy", "Zoinks! It's Shaggy from Scooby-Doo"},
+                    {"jackSparrow", "Savvy? It’s the Captain himself!"}
+            };
+
+            for (String[] persona : personas) {
+                String personaKey = persona[0];
+                String description = persona[1];
+                String fullUrl = basePersonaUrl + personaKey;
+
+                try {
+                    Log.d("PersonaFetch", "Attempting to call URL: " + fullUrl);
+                    URL personaUrl = new URL(fullUrl);
+                    HttpURLConnection pConn = (HttpURLConnection) personaUrl.openConnection();
+                    pConn.setRequestMethod("GET");
+
+                    int responseCode = pConn.getResponseCode();
+                    Log.d("PersonaFetch", "Response for " + personaKey + ": " + responseCode);
+
+                    if (responseCode == 200) {
+                        BufferedReader reader = new BufferedReader(new InputStreamReader(pConn.getInputStream()));
+                        StringBuilder response = new StringBuilder();
+                        String line;
+                        while ((line = reader.readLine()) != null) {
+                            response.append(line);
+                        }
+                        reader.close();
+
+                        Log.d("PersonaFetch", "Response Body for " + personaKey + ": " + response.toString());
+
+                        models.add(new AIModel(personaKey, description, R.drawable.model_gpt4));
+                    } else {
+                        Log.w("PersonaFetch", "Non-200 response for " + personaKey + ": " + responseCode);
+                    }
+
+                    pConn.disconnect();
+                } catch (Exception e) {
+                    Log.e("PersonaFetch", "Error loading persona " + personaKey, e);
+                }
+            }
+
+            runOnUiThread(() -> {
+                if (!models.isEmpty()) {
+                    aiModelCarousel.setModels(models);
+                    Log.d("PersonaFetch", "Models successfully loaded into carousel. Count: " + models.size());
+                } else {
+                    Toast.makeText(DashboardActivity.this, "Failed to load AI Models", Toast.LENGTH_SHORT).show();
+                    Log.e("PersonaFetch", "No models loaded — list is empty.");
+                }
+            });
+        });
+    }
+
+    private void setAI(String personaName) {
+        executor.execute(() -> {
             try {
-                URL url = new URL("http://35.222.77.247:5000/aimodels");
+                URL url = new URL("https://scam-scam-service-185231488037.us-central1.run.app/api/v1/users/set-preferences");
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestMethod("GET");
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setDoOutput(true);
+
+                String jsonInputString = String.format(
+                        "{\"ownedBy\": \"%s\", \"voice\": \"%s\", \"prompt\": \"\"}",
+                        userId, personaName
+                );
+
+                Log.d("SetAI", "Sending preference update: " + jsonInputString);
+
+                OutputStream os = conn.getOutputStream();
+                os.write(jsonInputString.getBytes("UTF-8"));
+                os.close();
+
+                int responseCode = conn.getResponseCode();
+                Log.d("SetAI", "Response Code: " + responseCode);
 
                 BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
                 StringBuilder response = new StringBuilder();
@@ -114,26 +198,18 @@ public class DashboardActivity extends AppCompatActivity {
                 }
                 reader.close();
 
-                JSONArray jsonArray = new JSONArray(response.toString());
-                for (int i = 0; i < jsonArray.length(); i++) {
-                    JSONObject jsonObject = jsonArray.getJSONObject(i);
-                    models.add(new AIModel(
-                            jsonObject.getString("name"),
-                            jsonObject.getString("description"),
-                            R.drawable.model_gpt4
-                    ));
-                }
+                Log.d("SetAI", "Response Body: " + response.toString());
 
                 runOnUiThread(() -> {
-                    if (!models.isEmpty()) {
-                        aiModelCarousel.setModels(models);
-                    } else {
-                        Toast.makeText(DashboardActivity.this, "Failed to load AI Models", Toast.LENGTH_SHORT).show();
-                    }
+                    Toast.makeText(this, "AI model updated to: " + personaName, Toast.LENGTH_SHORT).show();
+                    tvCurrentModel.setText("Current AI Model: " + personaName);
                 });
+
             } catch (Exception e) {
-                e.printStackTrace();
-                runOnUiThread(() -> Toast.makeText(DashboardActivity.this, "Failed to load AI Models", Toast.LENGTH_SHORT).show());
+                Log.e("SetAI", "Failed to set AI model", e);
+                runOnUiThread(() ->
+                        Toast.makeText(this, "Failed to update AI model", Toast.LENGTH_SHORT).show()
+                );
             }
         });
     }
