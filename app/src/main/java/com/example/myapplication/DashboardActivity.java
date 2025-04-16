@@ -9,6 +9,7 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -28,9 +29,8 @@ public class DashboardActivity extends AppCompatActivity {
     private Button btnViewBlackListWhiteList;
     private AIModelCarousel aiModelCarousel;
 
-    private String userId; // <- Holds the user ID passed from MainActivity
-
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private String userId;
 
     @Override
     protected void onDestroy() {
@@ -42,8 +42,6 @@ public class DashboardActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_dashboard);
-
-        // Get user ID from intent
         userId = getIntent().getStringExtra("USER_ID");
 
         tvWelcome = findViewById(R.id.tvWelcome);
@@ -51,7 +49,6 @@ public class DashboardActivity extends AppCompatActivity {
         btnViewCallHistory = findViewById(R.id.btnViewCallHistory);
         btnViewBlackListWhiteList = findViewById(R.id.btnViewBlackListWhiteList);
         aiModelCarousel = findViewById(R.id.aiModelCarousel);
-
         aiModelCarousel.setOnModelSelectedListener(selectedModel -> {
             setAI(selectedModel.getName());
         });
@@ -70,6 +67,7 @@ public class DashboardActivity extends AppCompatActivity {
             intent.putExtra("USER_ID", userId);
             startActivity(intent);
         });
+
     }
 
     private void fetchCurrentAIModel() {
@@ -109,7 +107,6 @@ public class DashboardActivity extends AppCompatActivity {
     private void fetchAIModels() {
         executor.execute(() -> {
             List<AIModel> models = new ArrayList<>();
-
             String basePersonaUrl = "https://aivoice-chatbox-185231488037.us-central1.run.app/incoming-call?persona=";
 
             String[][] personas = {
@@ -125,13 +122,11 @@ public class DashboardActivity extends AppCompatActivity {
                 String fullUrl = basePersonaUrl + personaKey;
 
                 try {
-                    Log.d("PersonaFetch", "Attempting to call URL: " + fullUrl);
                     URL personaUrl = new URL(fullUrl);
                     HttpURLConnection pConn = (HttpURLConnection) personaUrl.openConnection();
                     pConn.setRequestMethod("GET");
 
                     int responseCode = pConn.getResponseCode();
-                    Log.d("PersonaFetch", "Response for " + personaKey + ": " + responseCode);
 
                     if (responseCode == 200) {
                         BufferedReader reader = new BufferedReader(new InputStreamReader(pConn.getInputStream()));
@@ -142,11 +137,7 @@ public class DashboardActivity extends AppCompatActivity {
                         }
                         reader.close();
 
-                        Log.d("PersonaFetch", "Response Body for " + personaKey + ": " + response.toString());
-
                         models.add(new AIModel(personaKey, description, R.drawable.model_gpt4));
-                    } else {
-                        Log.w("PersonaFetch", "Non-200 response for " + personaKey + ": " + responseCode);
                     }
 
                     pConn.disconnect();
@@ -158,10 +149,8 @@ public class DashboardActivity extends AppCompatActivity {
             runOnUiThread(() -> {
                 if (!models.isEmpty()) {
                     aiModelCarousel.setModels(models);
-                    Log.d("PersonaFetch", "Models successfully loaded into carousel. Count: " + models.size());
                 } else {
                     Toast.makeText(DashboardActivity.this, "Failed to load AI Models", Toast.LENGTH_SHORT).show();
-                    Log.e("PersonaFetch", "No models loaded — list is empty.");
                 }
             });
         });
@@ -181,14 +170,9 @@ public class DashboardActivity extends AppCompatActivity {
                         userId, personaName
                 );
 
-                Log.d("SetAI", "Sending preference update: " + jsonInputString);
-
                 OutputStream os = conn.getOutputStream();
                 os.write(jsonInputString.getBytes("UTF-8"));
                 os.close();
-
-                int responseCode = conn.getResponseCode();
-                Log.d("SetAI", "Response Code: " + responseCode);
 
                 BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
                 StringBuilder response = new StringBuilder();
@@ -198,15 +182,12 @@ public class DashboardActivity extends AppCompatActivity {
                 }
                 reader.close();
 
-                Log.d("SetAI", "Response Body: " + response.toString());
-
                 runOnUiThread(() -> {
                     Toast.makeText(this, "AI model updated to: " + personaName, Toast.LENGTH_SHORT).show();
                     tvCurrentModel.setText("Current AI Model: " + personaName);
                 });
 
             } catch (Exception e) {
-                Log.e("SetAI", "Failed to set AI model", e);
                 runOnUiThread(() ->
                         Toast.makeText(this, "Failed to update AI model", Toast.LENGTH_SHORT).show()
                 );

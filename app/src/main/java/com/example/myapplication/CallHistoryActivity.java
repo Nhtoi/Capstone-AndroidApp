@@ -30,16 +30,15 @@ public class CallHistoryActivity extends AppCompatActivity {
     private RecyclerView rvCallHistory;
     private List<CallRecord> callRecords = new ArrayList<>();
     private static final String TAG = "CallHistoryActivity";
-    private static final String USER_ID = "6";
+    private String userId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_call_history);
-
+        userId = getIntent().getStringExtra("USER_ID");
         rvCallHistory = findViewById(R.id.rvCallHistory);
         rvCallHistory.setLayoutManager(new LinearLayoutManager(this));
-
         fetchCallHistory();
     }
 
@@ -55,7 +54,7 @@ public class CallHistoryActivity extends AppCompatActivity {
                 conn.setDoOutput(true);
 
                 JSONObject jsonParam = new JSONObject();
-                jsonParam.put("user", USER_ID);
+                jsonParam.put("user", userId);
 
                 OutputStream os = conn.getOutputStream();
                 os.write(jsonParam.toString().getBytes());
@@ -83,17 +82,30 @@ public class CallHistoryActivity extends AppCompatActivity {
                     for (int i = 0; i < callLogs.length(); i++) {
                         JSONObject call = callLogs.getJSONObject(i);
                         int callId = call.getInt("id");
-                        String callStartStr = call.getString("callStart");
-                        String callEndStr = call.getString("callEnd");
+                        String callStartStr = call.optString("callStart");
+                        String callEndStr = call.optString("callEnd");
 
-                        Date callStart = isoFormat.parse(callStartStr);
-                        Date callEnd = isoFormat.parse(callEndStr);
+                        String timestamp;
+                        int durationSeconds = 0;
 
-                        long durationSeconds = (callEnd.getTime() - callStart.getTime()) / 1000;
-                        String timestamp = displayFormat.format(callStart);
+                        try {
+                            if (callStartStr != null && !"null".equals(callStartStr) &&
+                                    callEndStr != null && !"null".equals(callEndStr)) {
+
+                                Date callStart = isoFormat.parse(callStartStr);
+                                Date callEnd = isoFormat.parse(callEndStr);
+                                timestamp = displayFormat.format(callStart);
+                                durationSeconds = (int) ((callEnd.getTime() - callStart.getTime()) / 1000);
+                            } else {
+                                timestamp = "Unknown Time";
+                            }
+                        } catch (Exception e) {
+                            Log.w(TAG, "Error parsing date for call id: " + callId, e);
+                            timestamp = "Invalid Date";
+                        }
+
                         String fakePhone = "+1-000-000-000" + i;
-
-                        records.add(new CallRecord(fakePhone, timestamp, (int) durationSeconds, callId));
+                        records.add(new CallRecord(fakePhone, timestamp, durationSeconds, callId));
                     }
                 }
 
@@ -140,8 +152,8 @@ public class CallHistoryActivity extends AppCompatActivity {
 
             View.OnClickListener clickListener = v -> {
                 Intent intent = new Intent(CallHistoryActivity.this, TranscriptActivity.class);
-                intent.putExtra("user_id", USER_ID);
-                intent.putExtra("call_id", String.valueOf(record.getCallId())); // ✅ pass as String
+                intent.putExtra("user_id", userId);
+                intent.putExtra("call_id", String.valueOf(record.getCallId()));
                 startActivity(intent);
             };
 

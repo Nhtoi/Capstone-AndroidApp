@@ -1,40 +1,31 @@
 package com.example.myapplication;
 
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
+import android.util.Base64;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import androidx.appcompat.app.AppCompatActivity;
 
 import org.json.JSONObject;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.Scanner;
 
 public class MainActivity extends AppCompatActivity {
+
+    public static String USERID;
 
     private EditText etEmail, etPassword;
     private Button btnLogin;
     private TextView tvSignUp;
-
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
-    private final Handler handler = new Handler(Looper.getMainLooper());
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        executor.shutdown();
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,18 +48,27 @@ public class MainActivity extends AppCompatActivity {
 
             if (email.equals("demo") && password.equals("demo")) {
                 Toast.makeText(MainActivity.this, "Login successful", Toast.LENGTH_SHORT).show();
-                startActivity(new Intent(MainActivity.this, DashboardActivity.class));
+                Intent intent = new Intent(MainActivity.this, DashboardActivity.class);
+                intent.putExtra("USER_ID", "6");
+                startActivity(intent);
             } else {
-                loginUser(email, password);
+                new LoginTask(MainActivity.this).execute(email, password);
             }
         });
 
         tvSignUp.setOnClickListener(v -> startActivity(new Intent(MainActivity.this, SignUpActivity.class)));
     }
 
-    private void loginUser(String email, String password) {
-        executor.execute(() -> {
-            String userId = null;
+    private static class LoginTask extends AsyncTask<String, Void, Boolean> {
+        private final MainActivity activity;
+        private String token = null;
+
+        LoginTask(MainActivity activity) {
+            this.activity = activity;
+        }
+
+        @Override
+        protected Boolean doInBackground(String... params) {
             try {
                 URL url = new URL("https://scam-scam-service-185231488037.us-central1.run.app/api/v1/auth/login");
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -77,8 +77,8 @@ public class MainActivity extends AppCompatActivity {
                 conn.setDoOutput(true);
 
                 JSONObject jsonParam = new JSONObject();
-                jsonParam.put("email", email);
-                jsonParam.put("password", password);
+                jsonParam.put("email", params[0]);
+                jsonParam.put("password", params[1]);
 
                 OutputStream os = conn.getOutputStream();
                 os.write(jsonParam.toString().getBytes());
@@ -88,35 +88,53 @@ public class MainActivity extends AppCompatActivity {
                 int responseCode = conn.getResponseCode();
 
                 if (responseCode == 200) {
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-                    StringBuilder response = new StringBuilder();
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        response.append(line);
-                    }
-                    reader.close();
+                    InputStream is = conn.getInputStream();
+                    Scanner scanner = new Scanner(is).useDelimiter("\\A");
+                    String response = scanner.hasNext() ? scanner.next() : "";
+                    scanner.close();
 
-                    JSONObject jsonResponse = new JSONObject(response.toString());
-                    JSONObject result = jsonResponse.getJSONObject("result");
-                    userId = result.getString("id");
+                    JSONObject responseJson = new JSONObject(response);
+                    token = responseJson.optString("token");
+
+                    Log.d("LoginTask", "Token from response: " + token);
+                    return true;
                 }
 
                 conn.disconnect();
+                return false;
+
             } catch (Exception e) {
                 e.printStackTrace();
+                return false;
+            }
+        }
+
+        @Override
+        protected void onPostExecute(Boolean success) {
+            if (success && token != null) {
+                try {
+                    String[] parts = token.split("\\.");
+                    if (parts.length == 3) {
+                        String payloadJson = new String(Base64.decode(parts[1], Base64.URL_SAFE));
+                        JSONObject payload = new JSONObject(payloadJson);
+                        String userId = payload.optString("id");
+                        Log.d("LoginTask", "Extracted user ID from token payload: " + userId);
+
+                        MainActivity.USERID = userId;
+
+                        Toast.makeText(activity, "Login successful", Toast.LENGTH_SHORT).show();
+                        Intent intent = new Intent(activity, DashboardActivity.class);
+                        intent.putExtra("USER_ID", userId);
+                        activity.startActivity(intent);
+                        return;
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    Log.e("LoginTask", "Failed to parse token payload");
+                }
             }
 
-            String finalUserId = userId;
-            handler.post(() -> {
-                if (finalUserId != null) {
-                    Toast.makeText(MainActivity.this, "Login successful", Toast.LENGTH_SHORT).show();
-                    Intent intent = new Intent(MainActivity.this, DashboardActivity.class);
-                    intent.putExtra("USER_ID", finalUserId);
-                    startActivity(intent);
-                } else {
-                    Toast.makeText(MainActivity.this, "Invalid credentials", Toast.LENGTH_SHORT).show();
-                }
-            });
-        });
+            Toast.makeText(activity, "Invalid credentials", Toast.LENGTH_SHORT).show();
+        }
     }
 }
