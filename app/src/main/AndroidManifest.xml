@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.example.myapplication"
+    android:sharedUserId="com.example.shareduserid">
 
     <application
         android:allowBackup="true"
@@ -28,7 +30,10 @@
         <activity android:name=".CallHistoryActivity" />
         <activity android:name=".WhiteListBlackList" />
         <activity android:name=".TranscriptActivity" />
-
     </application>
+
     <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.MediaStore.createWriteRequest"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+
 </manifest>

@@ -1,6 +1,8 @@
 package com.example.myapplication;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Base64;
@@ -13,6 +15,8 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import org.json.JSONObject;
 
+import java.io.File;
+import java.io.FileWriter;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -121,6 +125,16 @@ public class MainActivity extends AppCompatActivity {
                         Log.d("LoginTask", "Extracted user ID from token payload: " + userId);
 
                         MainActivity.USERID = userId;
+
+                        SharedPreferences prefs = activity.getSharedPreferences("UserPrefs", Context.MODE_PRIVATE);
+                        prefs.edit().putString("USER_ID", userId).apply();
+
+                        // Write user ID to file for external access
+                        File file = new File(activity.getFilesDir(), "userid.txt");
+                        FileWriter writer = new FileWriter(file);
+                        writer.write(userId);
+                        writer.close();
+                        Log.d("LoginTask", "User ID written to file: " + file.getAbsolutePath());
 
                         Toast.makeText(activity, "Login successful", Toast.LENGTH_SHORT).show();
                         Intent intent = new Intent(activity, DashboardActivity.class);
