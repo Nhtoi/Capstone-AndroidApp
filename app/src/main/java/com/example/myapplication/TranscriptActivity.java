@@ -79,13 +79,19 @@ public class TranscriptActivity extends AppCompatActivity {
                 conn.disconnect();
 
                 JSONArray callLogs = new JSONObject(response.toString()).getJSONArray("result");
-                int selectedCallIdInt = Integer.parseInt(selectedCallId);
+                List<JSONObject> callList = new ArrayList<>();
 
                 for (int i = 0; i < callLogs.length(); i++) {
-                    JSONObject call = callLogs.getJSONObject(i);
-                    int callId = call.getInt("id");
+                    callList.add(callLogs.getJSONObject(i));
+                }
 
-                    // Filter for the selected call only
+                // Sort by call ID descending (most recent first)
+                callList.sort((a, b) -> Integer.compare(b.optInt("id"), a.optInt("id")));
+
+                int selectedCallIdInt = Integer.parseInt(selectedCallId);
+
+                for (JSONObject call : callList) {
+                    int callId = call.getInt("id");
                     if (callId != selectedCallIdInt) continue;
 
                     String transcript = call.optString("fullTranscript", "");
@@ -104,9 +110,9 @@ public class TranscriptActivity extends AppCompatActivity {
 
                         resultMessages.add(new Message(line.trim(), messageType, speaker, String.valueOf(callId)));
                     }
-                }
 
-                Log.d(TAG, "Filtered Messages for Call ID " + selectedCallId + ": " + resultMessages.size());
+                    break; // Stop after finding the selected call
+                }
 
             } catch (Exception e) {
                 Log.e(TAG, "Error fetching call logs", e);
@@ -120,4 +126,5 @@ public class TranscriptActivity extends AppCompatActivity {
             });
         });
     }
+
 }

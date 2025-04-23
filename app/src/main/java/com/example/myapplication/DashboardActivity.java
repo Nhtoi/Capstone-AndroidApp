@@ -11,7 +11,10 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
-
+import java.io.File;
+import java.io.FileWriter;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -29,6 +32,7 @@ public class DashboardActivity extends AppCompatActivity {
     private Button btnViewBlackListWhiteList;
     private AIModelCarousel aiModelCarousel;
 
+    private Button btnLogout;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private String userId;
 
@@ -43,7 +47,7 @@ public class DashboardActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_dashboard);
         userId = getIntent().getStringExtra("USER_ID");
-
+        btnLogout = findViewById(R.id.btnLogout);
         tvWelcome = findViewById(R.id.tvWelcome);
         tvCurrentModel = findViewById(R.id.tvCurrentModel);
         btnViewCallHistory = findViewById(R.id.btnViewCallHistory);
@@ -68,7 +72,22 @@ public class DashboardActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
+        btnLogout.setOnClickListener(v -> {
+            File file = new File(getFilesDir(), "userid.txt");
+            if (file.exists()) file.delete();
+
+            // Clear SharedPreferences
+            getSharedPreferences("UserPrefs", MODE_PRIVATE).edit().clear().apply();
+
+            // Redirect to MainActivity
+            Intent intent = new Intent(DashboardActivity.this, MainActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK); // clear back stack
+            startActivity(intent);
+            Toast.makeText(this, "Logged out", Toast.LENGTH_SHORT).show();
+        });
+
     }
+
 
     private void fetchCurrentAIModel() {
         executor.execute(() -> {

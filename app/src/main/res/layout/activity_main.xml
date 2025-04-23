@@ -9,7 +9,7 @@
     <ImageView
         android:layout_width="100dp"
         android:layout_height="100dp"
-        android:src="@drawable/app_logo"
+        android:src="@drawable/logonew_removebg_preview"
         android:layout_marginBottom="32dp"
         android:contentDescription="App Logo" />
 
